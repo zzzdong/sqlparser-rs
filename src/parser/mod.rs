@@ -6407,10 +6407,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        self.expect_token(&Token::LParen)?;
-        let columns = self.parse_comma_separated(Parser::parse_order_by_expr)?;
-        self.expect_token(&Token::RParen)?;
-
+        let columns = self.parse_index_exprs()?;
         let include = if self.parse_keyword(Keyword::INCLUDE) {
             self.expect_token(&Token::LParen)?;
             let columns = self.parse_comma_separated(|p| p.parse_identifier())?;
@@ -7439,7 +7436,6 @@ impl<'a> Parser<'a> {
                 // optional index name
                 let index_name = self.parse_optional_indent()?;
                 let index_type = self.parse_optional_using_then_index_type()?;
-
                 let index_exprs = self.parse_index_exprs()?;
                 let index_options = self.parse_index_options()?;
                 let characteristics = self.parse_constraint_characteristics()?;
@@ -7646,10 +7642,14 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parse index expressions, like:
+    /// `(column_name [COLLATE collation] [opclass [ ( opclass_parameter = value [, ... ] )] [ASC | DESC] [NULLS {FIRST | LAST}]] [, ... ])`
     pub fn parse_index_exprs(&mut self) -> Result<Vec<IndexExpr>, ParserError> {
         self.parse_parenthesized(|p| p.parse_comma_separated(Parser::parse_index_expr))
     }
 
+    /// Parse index expression, like:
+    /// `column_name [COLLATE collation] [opclass [ ( opclass_parameter = value [, ... ] )] [ASC | DESC] [NULLS {FIRST | LAST}]`
     pub fn parse_index_expr(&mut self) -> Result<IndexExpr, ParserError> {
         let expr = self.parse_expr()?;
         let collation = if self.parse_keyword(Keyword::COLLATE) {
@@ -7658,25 +7658,45 @@ impl<'a> Parser<'a> {
             None
         };
 
-        let (operator_class, order_options) = if self.peek_keyword(Keyword::ASC)
+        let (opclass, sort_options) = if self.peek_keyword(Keyword::ASC)
             || self.peek_keyword(Keyword::DESC)
             || self.peek_keyword(Keyword::NULLS)
         {
-            let order_options = self.parse_order_by_options()?;
-            (None, order_options)
+            let sort_options = self.parse_order_by_options()?;
+            (None, sort_options)
         } else {
-            let operator_class = self.maybe_parse(|p| p.parse_expr())?;
+            let opclass = self.maybe_parse(|p| p.parse_operator_class())?;
 
-            let order_options = self.parse_order_by_options()?;
-            (operator_class, order_options)
+            let sort_options = self.parse_order_by_options()?;
+            (opclass, sort_options)
         };
 
         Ok(IndexExpr {
             expr,
             collation,
-            operator_class,
-            order_options,
+            opclass,
+            sort_options,
         })
+    }
+
+    fn parse_operator_class(&mut self) -> Result<OperatorClass, ParserError> {
+        let name = self.parse_identifier()?;
+        let parameters = if self.peek_token() == Token::LParen {
+            self.parse_parenthesized(|p| {
+                p.parse_comma_separated(Parser::parse_operator_class_param)
+            })?
+        } else {
+            vec![]
+        };
+
+        Ok(OperatorClass { name, parameters })
+    }
+
+    fn parse_operator_class_param(&mut self) -> Result<OperatorClassParameter, ParserError> {
+        let name = self.parse_identifier()?;
+        self.expect_token(&Token::Eq)?;
+        let value = self.parse_expr()?;
+        Ok(OperatorClassParameter { name, value })
     }
 
     /// Parse `[ident]`, mostly `ident` is name, like:
@@ -14721,8 +14741,6 @@ impl Word {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
     use crate::test_utils::{all_dialects, TestedDialects};
 
     use super::*;
@@ -15176,8 +15194,8 @@ mod tests {
                 index_exprs: vec![IndexExpr {
                     expr: Expr::Identifier(Ident::new("c1")),
                     collation: None,
-                    operator_class: None,
-                    order_options: OrderByOptions {
+                    opclass: None,
+                    sort_options: OrderByOptions {
                         asc: None,
                         nulls_first: None,
                     },
@@ -15195,8 +15213,8 @@ mod tests {
                 index_exprs: vec![IndexExpr {
                     expr: Expr::Identifier(Ident::new("c1")),
                     collation: None,
-                    operator_class: None,
-                    order_options: OrderByOptions {
+                    opclass: None,
+                    sort_options: OrderByOptions {
                         asc: None,
                         nulls_first: None,
                     },
@@ -15215,8 +15233,8 @@ mod tests {
                     IndexExpr {
                         expr: Expr::Identifier(Ident::new("c1")),
                         collation: None,
-                        operator_class: None,
-                        order_options: OrderByOptions {
+                        opclass: None,
+                        sort_options: OrderByOptions {
                             asc: None,
                             nulls_first: None,
                         },
@@ -15224,8 +15242,8 @@ mod tests {
                     IndexExpr {
                         expr: Expr::Identifier(Ident::new("c2")),
                         collation: None,
-                        operator_class: None,
-                        order_options: OrderByOptions {
+                        opclass: None,
+                        sort_options: OrderByOptions {
                             asc: None,
                             nulls_first: None,
                         },
@@ -15244,8 +15262,8 @@ mod tests {
                 index_exprs: vec![IndexExpr {
                     expr: Expr::Identifier(Ident::new("c1")),
                     collation: None,
-                    operator_class: None,
-                    order_options: OrderByOptions {
+                    opclass: None,
+                    sort_options: OrderByOptions {
                         asc: None,
                         nulls_first: None,
                     },
@@ -15263,8 +15281,8 @@ mod tests {
                 index_exprs: vec![IndexExpr {
                     expr: Expr::Identifier(Ident::new("c1")),
                     collation: None,
-                    operator_class: None,
-                    order_options: OrderByOptions {
+                    opclass: None,
+                    sort_options: OrderByOptions {
                         asc: None,
                         nulls_first: None,
                     },
@@ -15282,8 +15300,8 @@ mod tests {
                 index_exprs: vec![IndexExpr {
                     expr: Expr::Identifier(Ident::new("c1")),
                     collation: None,
-                    operator_class: None,
-                    order_options: OrderByOptions {
+                    opclass: None,
+                    sort_options: OrderByOptions {
                         asc: None,
                         nulls_first: None,
                     },
@@ -15301,8 +15319,8 @@ mod tests {
                 index_exprs: vec![IndexExpr {
                     expr: Expr::Identifier(Ident::new("c1")),
                     collation: None,
-                    operator_class: None,
-                    order_options: OrderByOptions {
+                    opclass: None,
+                    sort_options: OrderByOptions {
                         asc: None,
                         nulls_first: None,
                     },
@@ -15319,49 +15337,25 @@ mod tests {
                 index_type: None,
                 index_exprs: vec![
                     IndexExpr {
-                        expr: Expr::Function(Function {
-                            name: ObjectName::from(vec![Ident::new("c1")]),
-                            uses_odbc_syntax: false,
-                            parameters: FunctionArguments::None,
-                            args: FunctionArguments::List(FunctionArgumentList {
-                                duplicate_treatment: None,
-                                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
-                                    Expr::Value(crate::test_utils::number("10"))
-                                )),],
-                                clauses: vec![],
-                            }),
-                            filter: None,
-                            null_treatment: None,
-                            over: None,
-                            within_group: vec![],
-                        }),
+                        expr: crate::test_utils::call(
+                            "c1",
+                            [Expr::Value(crate::test_utils::number("10"))]
+                        ),
                         collation: None,
-                        operator_class: None,
-                        order_options: OrderByOptions {
+                        opclass: None,
+                        sort_options: OrderByOptions {
                             asc: None,
                             nulls_first: None,
                         },
                     },
                     IndexExpr {
-                        expr: Expr::Nested(Box::new(Expr::Function(Function {
-                            name: ObjectName::from(vec![Ident::new("LOWER")]),
-                            uses_odbc_syntax: false,
-                            parameters: FunctionArguments::None,
-                            args: FunctionArguments::List(FunctionArgumentList {
-                                duplicate_treatment: None,
-                                args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
-                                    Expr::Identifier(Ident::new("c2"))
-                                )),],
-                                clauses: vec![],
-                            }),
-                            filter: None,
-                            null_treatment: None,
-                            over: None,
-                            within_group: vec![],
-                        }))),
+                        expr: Expr::Nested(Box::new(crate::test_utils::call(
+                            "LOWER",
+                            [Expr::Identifier(Ident::new("c2"))]
+                        ))),
                         collation: None,
-                        operator_class: None,
-                        order_options: OrderByOptions {
+                        opclass: None,
+                        sort_options: OrderByOptions {
                             asc: Some(false),
                             nulls_first: None,
                         }

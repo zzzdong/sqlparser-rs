@@ -8697,27 +8697,66 @@ pub enum CopyIntoSnowflakeKind {
 /// [1]: https://dev.mysql.com/doc/refman/8.3/en/create-index.html
 /// [2]: https://www.postgresql.org/docs/17/sql-createindex.html
 /// [3]: https://dev.mysql.com/doc/refman/8.3/en/create-table.html
-
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
 pub struct IndexExpr {
     pub expr: Expr,
     pub collation: Option<ObjectName>,
-    pub operator_class: Option<Expr>,
-    pub order_options: OrderByOptions,
+    /// The operator class identifies the operators to be used by the index for that column.
+    /// See: <https://www.postgresql.org/docs/17/indexes-opclass.html>
+    pub opclass: Option<OperatorClass>,
+    pub sort_options: OrderByOptions,
 }
 
 impl fmt::Display for IndexExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.expr)?;
         if let Some(collation) = &self.collation {
-            write!(f, "{collation}")?;
+            write!(f, " {collation}")?;
         }
-        if let Some(operator) = &self.operator_class {
-            write!(f, "{operator}")?;
+        if let Some(opclass) = &self.opclass {
+            write!(f, " {opclass}")?;
         }
-        write!(f, "{}", self.order_options)
+        write!(f, "{}", self.sort_options)
+    }
+}
+
+/// Operator class
+///
+/// This structure used here [`PostgreSQL` CREATE INDEX][1].
+///
+/// [1]: https://www.postgresql.org/docs/17/indexes-opclass.html
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub struct OperatorClass {
+    pub name: Ident,
+    pub parameters: Vec<OperatorClassParameter>,
+}
+
+impl fmt::Display for OperatorClass {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        if !self.parameters.is_empty() {
+            write!(f, "({})", display_comma_separated(&self.parameters))?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub struct OperatorClassParameter {
+    pub name: Ident,
+    pub value: Expr,
+}
+
+impl fmt::Display for OperatorClassParameter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} = {}", self.name, self.value)
     }
 }
 

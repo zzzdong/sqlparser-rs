@@ -426,3 +426,30 @@ pub fn call(function: &str, args: impl IntoIterator<Item = Expr>) -> Expr {
         within_group: vec![],
     })
 }
+
+pub fn call_with_named_arg(
+    function: &str,
+    args: impl IntoIterator<Item = (Ident, Expr, FunctionArgOperator)>,
+) -> Expr {
+    Expr::Function(Function {
+        name: ObjectName::from(vec![Ident::new(function)]),
+        uses_odbc_syntax: false,
+        parameters: FunctionArguments::None,
+        args: FunctionArguments::List(FunctionArgumentList {
+            duplicate_treatment: None,
+            args: args
+                .into_iter()
+                .map(|(name, arg, operator)| FunctionArg::Named {
+                    name,
+                    arg: FunctionArgExpr::Expr(arg),
+                    operator,
+                })
+                .collect(),
+            clauses: vec![],
+        }),
+        filter: None,
+        null_treatment: None,
+        over: None,
+        within_group: vec![],
+    })
+}

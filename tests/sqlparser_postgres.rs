@@ -2637,6 +2637,53 @@ fn parse_create_index_with_nulls_distinct() {
 }
 
 #[test]
+fn parse_create_index_with_with_opclass() {
+    let sql = "CREATE INDEX idx_time_ranges ON time_ranges USING gin (time_period gin__tsrange_ops(gin_pending_list_limit = 4096) DESC NULLS FIRST)";
+    let indexed_columns = vec![IndexExpr {
+        expr: Expr::Identifier(Ident::new("time_period")),
+        collation: None,
+        opclass: Some(OperatorClass {
+            name: Ident::new("gin__tsrange_ops"),
+            parameters: vec![OperatorClassParameter {
+                name: Ident::new("gin_pending_list_limit"),
+                value: Expr::Value(crate::test_utils::number("4096")),
+            }],
+        }),
+        sort_options: OrderByOptions {
+            asc: Some(false),
+            nulls_first: Some(true),
+        },
+    }];
+
+    match pg().verified_stmt(sql) {
+        Statement::CreateIndex(CreateIndex {
+            name: Some(name),
+            table_name,
+            using,
+            columns,
+            unique,
+            concurrently,
+            if_not_exists,
+            include,
+            nulls_distinct: None,
+            with,
+            predicate: None,
+        }) => {
+            pretty_assertions::assert_eq!("idx_time_ranges", name.to_string());
+            pretty_assertions::assert_eq!("time_ranges", table_name.to_string());
+            assert_eq!("gin", using.unwrap().to_string());
+            pretty_assertions::assert_eq!(indexed_columns, columns);
+            assert!(!unique);
+            assert!(!concurrently);
+            assert!(!if_not_exists);
+            assert!(include.is_empty());
+            assert!(with.is_empty());
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
 fn parse_array_subquery_expr() {
     let sql = "SELECT ARRAY(SELECT 1 UNION SELECT 2)";
     let select = pg().verified_only_select(sql);

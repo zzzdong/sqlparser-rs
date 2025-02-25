@@ -8749,21 +8749,23 @@ fn ensure_multiple_dialects_are_tested() {
 fn parse_create_index() {
     let sql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)";
     let indexed_columns = vec![
-        OrderByExpr {
+        IndexExpr {
             expr: Expr::Identifier(Ident::new("name")),
-            options: OrderByOptions {
+            collation: None,
+            opclass: None,
+            sort_options: OrderByOptions {
                 asc: None,
                 nulls_first: None,
             },
-            with_fill: None,
         },
-        OrderByExpr {
+        IndexExpr {
             expr: Expr::Identifier(Ident::new("age")),
-            options: OrderByOptions {
+            collation: None,
+            opclass: None,
+            sort_options: OrderByOptions {
                 asc: Some(false),
                 nulls_first: None,
             },
-            with_fill: None,
         },
     ];
     match verified_stmt(sql) {
@@ -8789,21 +8791,23 @@ fn parse_create_index() {
 fn test_create_index_with_using_function() {
     let sql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING btree (name,age DESC)";
     let indexed_columns = vec![
-        OrderByExpr {
+        IndexExpr {
             expr: Expr::Identifier(Ident::new("name")),
-            options: OrderByOptions {
+            collation: None,
+            opclass: None,
+            sort_options: OrderByOptions {
                 asc: None,
                 nulls_first: None,
             },
-            with_fill: None,
         },
-        OrderByExpr {
+        IndexExpr {
             expr: Expr::Identifier(Ident::new("age")),
-            options: OrderByOptions {
+            collation: None,
+            opclass: None,
+            sort_options: OrderByOptions {
                 asc: Some(false),
                 nulls_first: None,
             },
-            with_fill: None,
         },
     ];
     match verified_stmt(sql) {
@@ -8837,13 +8841,14 @@ fn test_create_index_with_using_function() {
 #[test]
 fn test_create_index_with_with_clause() {
     let sql = "CREATE UNIQUE INDEX title_idx ON films(title) WITH (fillfactor = 70, single_param)";
-    let indexed_columns = vec![OrderByExpr {
+    let indexed_columns = vec![IndexExpr {
         expr: Expr::Identifier(Ident::new("title")),
-        options: OrderByOptions {
+        collation: None,
+        opclass: None,
+        sort_options: OrderByOptions {
             asc: None,
             nulls_first: None,
         },
-        with_fill: None,
     }];
     let with_parameters = vec![
         Expr::BinaryOp {

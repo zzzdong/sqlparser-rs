@@ -2183,8 +2183,8 @@ impl Spanned for IndexExpr {
         let IndexExpr {
             expr,
             collation: _,
-            operator_class: _,
-            order_options: _,
+            opclass: _,
+            sort_options: _,
         } = self;
 
         union_spans(core::iter::once(expr.span()))

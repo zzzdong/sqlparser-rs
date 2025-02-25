@@ -716,8 +716,8 @@ fn parse_create_table_primary_and_unique_key() {
                     vec![IndexExpr {
                         expr: Expr::Identifier(Ident::new("bar")),
                         collation: None,
-                        operator_class: None,
-                        order_options: OrderByOptions {
+                        opclass: None,
+                        sort_options: OrderByOptions {
                             asc: None,
                             nulls_first: None,
                         },
@@ -788,8 +788,8 @@ fn parse_create_table_primary_and_unique_key_with_index_options() {
                         IndexExpr {
                             expr: Expr::Identifier(Ident::new("bar")),
                             collation: None,
-                            operator_class: None,
-                            order_options: OrderByOptions {
+                            opclass: None,
+                            sort_options: OrderByOptions {
                                 asc: None,
                                 nulls_first: None,
                             },
@@ -797,8 +797,8 @@ fn parse_create_table_primary_and_unique_key_with_index_options() {
                         IndexExpr {
                             expr: Expr::Identifier(Ident::new("var")),
                             collation: None,
-                            operator_class: None,
-                            order_options: OrderByOptions {
+                            opclass: None,
+                            sort_options: OrderByOptions {
                                 asc: None,
                                 nulls_first: None,
                             },
@@ -844,8 +844,8 @@ fn parse_create_table_primary_and_unique_key_with_index_type() {
                     vec![IndexExpr {
                         expr: Expr::Identifier(Ident::new("bar")),
                         collation: None,
-                        operator_class: None,
-                        order_options: OrderByOptions {
+                        opclass: None,
+                        sort_options: OrderByOptions {
                             asc: None,
                             nulls_first: None,
                         },
@@ -2293,8 +2293,8 @@ fn parse_alter_table_add_keys() {
                         index_exprs: vec![IndexExpr {
                             expr: Expr::Identifier(Ident::new("a")),
                             collation: None,
-                            operator_class: None,
-                            order_options: OrderByOptions {
+                            opclass: None,
+                            sort_options: OrderByOptions {
                                 asc: None,
                                 nulls_first: None,
                             },
@@ -2309,25 +2309,13 @@ fn parse_alter_table_add_keys() {
                         index_type: None,
                         index_exprs: vec![
                             IndexExpr {
-                                expr: Expr::Function(Function {
-                                    name: ObjectName::from(vec![Ident::new("b")]),
-                                    uses_odbc_syntax: false,
-                                    parameters: FunctionArguments::None,
-                                    args: FunctionArguments::List(FunctionArgumentList {
-                                        duplicate_treatment: None,
-                                        args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(
-                                            Expr::Value(crate::test_utils::number("20"))
-                                        )),],
-                                        clauses: vec![],
-                                    }),
-                                    filter: None,
-                                    null_treatment: None,
-                                    over: None,
-                                    within_group: vec![],
-                                }),
+                                expr: crate::test_utils::call(
+                                    "b",
+                                    [Expr::Value(crate::test_utils::number("20"))]
+                                ),
                                 collation: None,
-                                operator_class: None,
-                                order_options: OrderByOptions {
+                                opclass: None,
+                                sort_options: OrderByOptions {
                                     asc: None,
                                     nulls_first: None,
                                 },
@@ -2335,8 +2323,8 @@ fn parse_alter_table_add_keys() {
                             IndexExpr {
                                 expr: Expr::Identifier(Ident::new("c")),
                                 collation: None,
-                                operator_class: None,
-                                order_options: OrderByOptions {
+                                opclass: None,
+                                sort_options: OrderByOptions {
                                     asc: None,
                                     nulls_first: None,
                                 },

@@ -34,10 +34,10 @@ pub use super::ddl::{ColumnDef, TableConstraint};
 use super::{
     display_comma_separated, display_separated, query::InputFormatClause, Assignment, ClusteredBy,
     CommentDef, Expr, FileFormat, FromTable, HiveDistributionStyle, HiveFormat, HiveIOFormat,
-    HiveRowFormat, Ident, InsertAliases, MysqlInsertPriority, ObjectName, OnCommit, OnInsert,
-    OneOrManyWithParens, OrderByExpr, Query, RowAccessPolicy, SelectItem, Setting, SqlOption,
-    SqliteOnConflict, StorageSerializationPolicy, TableEngine, TableObject, TableWithJoins, Tag,
-    WrappedCollection,
+    HiveRowFormat, Ident, IndexExpr, InsertAliases, MysqlInsertPriority, ObjectName, OnCommit,
+    OnInsert, OneOrManyWithParens, OrderByExpr, Query, RowAccessPolicy, SelectItem, Setting,
+    SqlOption, SqliteOnConflict, StorageSerializationPolicy, TableEngine, TableObject,
+    TableWithJoins, Tag, WrappedCollection,
 };
 
 /// CREATE INDEX statement.
@@ -50,7 +50,7 @@ pub struct CreateIndex {
     #[cfg_attr(feature = "visitor", visit(with = "visit_relation"))]
     pub table_name: ObjectName,
     pub using: Option<Ident>,
-    pub columns: Vec<OrderByExpr>,
+    pub columns: Vec<IndexExpr>,
     pub unique: bool,
     pub concurrently: bool,
     pub if_not_exists: bool,
